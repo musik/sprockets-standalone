@@ -97,46 +97,36 @@ module Sprockets
           raise Error, "manifest requires environment for compilation"
         end
 
-        paths = environment.each_logical_path(*args).to_a +
-          args.flatten.select { |fn| Pathname.new(fn).absolute? if fn.is_a?(String)}
+        filenames = []
 
-        if (missing_paths = (args.reject{|p| p.include?('*')} - paths)).any?
-          missing_paths.each do |path|
-            logger.warn "Asset #{path} not found."
-          end
-        end
+        find(*args) do |asset|
+          # PATCH: override path
+          path = digest_assets? ? asset.digest_path : asset.logical_path
 
-        paths.each do |path|
-          if asset = find_asset(path)
-            compile_asset asset
+          files[path] = {
+            'logical_path' => asset.logical_path,
+            'mtime'        => asset.mtime.iso8601,
+            'size'         => asset.bytesize,
+            'digest'       => asset.hexdigest,
+            'integrity'    => asset.integrity
+          }
+          assets[asset.logical_path] = path
+
+          target = File.join(dir, path)
+
+          if File.exist?(target)
+            logger.debug "Skipping #{target}, already exists"
+          else
+            logger.info "Writing #{target}"
+            asset.write_to target
+            asset.write_to "#{target}.gz" if compress_assets?
           end
+
+          filenames << asset.filename
         end
         save
-        paths
-      end
 
-      def compile_asset(asset)
-        path   = digest_assets? ? asset.digest_path : asset.logical_path
-        target = File.join(dir, path)
-
-        if files[path] && (digest = files[path]['digest'])
-          if digest == asset.digest && File.exists?(target)
-            logger.debug "Skipping #{target}, up-to-date"
-            return
-          end
-        end
-
-        files[path] = {
-          'logical_path' => asset.logical_path,
-          'mtime'        => asset.mtime.iso8601,
-          'size'         => asset.bytesize,
-          'digest'       => asset.digest
-        }
-        assets[asset.logical_path] = path
-
-        logger.info "Writing #{target}"
-        asset.write_to target
-        asset.write_to "#{target}.gz" if asset.is_a?(BundledAsset) && compress_assets?
+        filenames
       end
     end
   end
