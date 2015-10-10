@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rake"
-  spec.add_dependency "sprockets", "~> 3.0.0.beta"
+  spec.add_dependency "sprockets", "~> 3.0"
 
   spec.add_development_dependency "bundler", "~> 1.4"
 end
