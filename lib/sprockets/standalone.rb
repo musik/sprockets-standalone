@@ -119,6 +119,7 @@ module Sprockets
           else
             logger.info "Writing #{target}"
             asset.write_to target
+            asset.write_to File.join(dir,asset.logical_path) if digest_assets?
             asset.write_to "#{target}.gz" if compress_assets?
           end
 
